@@ -12,11 +12,11 @@ Het systeem SHALL het spelverloop structureren in opeenvolgende fases: verbindin
 - **THEN** gaat het spel over naar de plaatsingsfase
 
 ### Requirement: Spelers schieten om beurten
-Het systeem SHALL beurtenwisseling afdwingen waarbij spelers afwisselend schieten.
+Het systeem SHALL beurtenwisseling afdwingen waarbij spelers afwisselend schieten. Beide spelers verwerken inkomende schoten op hun eigen bord en sturen het resultaat terug — het protocol is symmetrisch voor host en guest.
 
 #### Scenario: Schot door actieve speler
 - **WHEN** de actieve speler op een cel van het tegenstander-bord klikt
-- **THEN** registreert het systeem het schot en stuurt het resultaat naar beide spelers
+- **THEN** stuurt het systeem een `shot` bericht naar de tegenstander, die het verwerkt op zijn eigen bord en een `shot-result` terugstuur
 
 #### Scenario: Schot door inactieve speler geblokkeerd
 - **WHEN** een speler op het bord klikt terwijl de tegenstander aan de beurt is
