@@ -7,7 +7,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 // https://vite.dev/config/
 // base: '/battleship/' for GitHub Pages deployment (repo name as sub-path)
 export default defineConfig({
-  base: process.env.GITHUB_PAGES ? '/battleship/' : '/',
+  base: process.env.GITHUB_PAGES ? '/openspec_battleship/' : '/',
   plugins: [
     vue(),
     vueDevTools(),
