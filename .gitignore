@@ -3,7 +3,7 @@ opencode-desktop-linux-amd64.deb
 openspec_workshop_notes.txt
 
 # Node
-#battleship/node_modules/
+battleship/node_modules/
 battleship/dist/
 battleship/dist-ssr/
 battleship/coverage/
