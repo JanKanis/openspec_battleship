@@ -11,20 +11,68 @@ const myPeerId = ref<string>('')
 const errorMessage = ref<string>('')
 const role = ref<PlayerRole | null>(null)
 
+// Heartbeat state
+const heartbeatLost = ref(false)
+const secondsSinceLastHeartbeat = ref(0)
+let lastReceivedAt = Date.now()
+let pingIntervalId: ReturnType<typeof setInterval> | null = null
+let secondsIntervalId: ReturnType<typeof setInterval> | null = null
+
 let onMessageCallback: ((msg: GameMessage) => void) | null = null
 let onConnectedCallback: (() => void) | null = null
 let onDisconnectedCallback: (() => void) | null = null
+
+function resetHeartbeat() {
+  lastReceivedAt = Date.now()
+  heartbeatLost.value = false
+  secondsSinceLastHeartbeat.value = 0
+}
+
+function startHeartbeat() {
+  resetHeartbeat()
+
+  // Beide kanten sturen onafhankelijk elke 10 seconden een ping
+  pingIntervalId = setInterval(() => {
+    connection.value?.send({ type: 'ping' })
+  }, 10000)
+
+  // Secondeteller: bijhouden hoe lang geen bericht ontvangen
+  secondsIntervalId = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - lastReceivedAt) / 1000)
+    secondsSinceLastHeartbeat.value = elapsed
+    heartbeatLost.value = elapsed > 15
+  }, 1000)
+}
+
+function stopHeartbeat() {
+  if (pingIntervalId !== null) {
+    clearInterval(pingIntervalId)
+    pingIntervalId = null
+  }
+  if (secondsIntervalId !== null) {
+    clearInterval(secondsIntervalId)
+    secondsIntervalId = null
+  }
+  heartbeatLost.value = false
+  secondsSinceLastHeartbeat.value = 0
+}
 
 function setupConnectionHandlers(conn: DataConnection) {
   connection.value = conn
 
   conn.on('open', () => {
     status.value = 'connected'
+    startHeartbeat()
     onConnectedCallback?.()
   })
 
   conn.on('data', (data) => {
-    onMessageCallback?.(data as GameMessage)
+    const msg = data as GameMessage
+    // Elk ontvangen bericht bewijst dat de verbinding leeft
+    resetHeartbeat()
+    // Ping is alleen een hartslag — niet doorsturen naar spellogica
+    if (msg.type === 'ping') return
+    onMessageCallback?.(msg)
   })
 
   conn.on('close', () => {
@@ -107,6 +155,7 @@ export function usePeerConnection() {
   }
 
   function destroy() {
+    stopHeartbeat()
     connection.value?.close()
     peer.value?.destroy()
     peer.value = null
@@ -125,6 +174,8 @@ export function usePeerConnection() {
     myPeerId: readonly(myPeerId),
     errorMessage: readonly(errorMessage),
     role: readonly(role),
+    heartbeatLost: readonly(heartbeatLost),
+    secondsSinceLastHeartbeat: readonly(secondsSinceLastHeartbeat),
     initHost,
     connectToHost,
     sendMessage,

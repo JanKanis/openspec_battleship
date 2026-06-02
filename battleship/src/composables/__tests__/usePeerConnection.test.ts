@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { nextTick } from 'vue'
 
 // --- PeerJS mock via vi.hoisted zodat hij ook in vi.mock factory beschikbaar is ---
 const peerState = vi.hoisted(() => ({
@@ -258,6 +259,111 @@ describe('usePeerConnection', () => {
       expect(peer.myPeerId.value).toBe('')
       expect(peer.errorMessage.value).toBe('')
       expect(peer.role.value).toBeNull()
+    })
+  })
+
+  // --- heartbeat ---
+  describe('heartbeat', () => {
+    it('heartbeatLost wordt true na 15+ seconden geen bericht', async () => {
+      vi.useFakeTimers()
+      const p = peer.connectToHost('host-id')
+      const mockPeer = peerState.instances[0]
+      mockPeer.trigger('open')
+      await Promise.resolve()
+      const conn = mockPeer.lastConn!
+      conn.trigger('open')
+      await p
+
+      expect(peer.heartbeatLost.value).toBe(false)
+
+      vi.advanceTimersByTime(16000)
+      await nextTick()
+
+      expect(peer.heartbeatLost.value).toBe(true)
+      expect(peer.secondsSinceLastHeartbeat.value).toBeGreaterThanOrEqual(15)
+
+      vi.useRealTimers()
+    })
+
+    it('heartbeatLost reset na ontvangen bericht', async () => {
+      vi.useFakeTimers()
+      const p = peer.connectToHost('host-id')
+      const mockPeer = peerState.instances[0]
+      mockPeer.trigger('open')
+      await Promise.resolve()
+      const conn = mockPeer.lastConn!
+      conn.trigger('open')
+      await p
+
+      // Wacht 16 seconden zodat heartbeatLost = true
+      vi.advanceTimersByTime(16000)
+      await nextTick()
+      expect(peer.heartbeatLost.value).toBe(true)
+
+      // Stuur een bericht — reset de timer
+      conn.trigger('data', { type: 'ready' })
+      vi.advanceTimersByTime(1000)
+      await nextTick()
+
+      expect(peer.heartbeatLost.value).toBe(false)
+      expect(peer.secondsSinceLastHeartbeat.value).toBeLessThan(5)
+
+      vi.useRealTimers()
+    })
+
+    it('ping bericht wordt niet doorgestuurd naar onMessage callback', async () => {
+      const p = peer.connectToHost('host-id')
+      const mockPeer = peerState.instances[0]
+      mockPeer.trigger('open')
+      await Promise.resolve()
+      const conn = mockPeer.lastConn!
+      conn.trigger('open')
+      await p
+
+      const msgCb = vi.fn()
+      peer.onMessage(msgCb)
+      conn.trigger('data', { type: 'ping' })
+
+      expect(msgCb).not.toHaveBeenCalled()
+    })
+
+    it('destroy stopt heartbeat en reset heartbeatLost', async () => {
+      vi.useFakeTimers()
+      const p = peer.connectToHost('host-id')
+      const mockPeer = peerState.instances[0]
+      mockPeer.trigger('open')
+      await Promise.resolve()
+      mockPeer.lastConn!.trigger('open')
+      await p
+
+      vi.advanceTimersByTime(16000)
+      await nextTick()
+      expect(peer.heartbeatLost.value).toBe(true)
+
+      peer.destroy()
+      expect(peer.heartbeatLost.value).toBe(false)
+      expect(peer.secondsSinceLastHeartbeat.value).toBe(0)
+
+      vi.useRealTimers()
+    })
+
+    it('stuurt elke 10 seconden een ping', async () => {
+      vi.useFakeTimers()
+      const p = peer.connectToHost('host-id')
+      const mockPeer = peerState.instances[0]
+      mockPeer.trigger('open')
+      await Promise.resolve()
+      const conn = mockPeer.lastConn!
+      conn.trigger('open')
+      await p
+
+      vi.advanceTimersByTime(30000)
+
+      // 3 pings verwacht (na 10s, 20s, 30s)
+      const pings = conn.send.mock.calls.filter((c: any[]) => c[0]?.type === 'ping')
+      expect(pings.length).toBe(3)
+
+      vi.useRealTimers()
     })
   })
 })

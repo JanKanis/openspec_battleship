@@ -30,6 +30,8 @@ function createMockPeer() {
     myPeerId: ref(''),
     errorMessage: ref(''),
     role: ref(null as any),
+    heartbeatLost: ref(false),
+    secondsSinceLastHeartbeat: ref(0),
     initHost: vi.fn(),
     connectToHost: vi.fn(),
     sendMessage: vi.fn(),
@@ -249,6 +251,29 @@ describe('GameView', () => {
       expect.objectContaining({ type: 'game-over', winner: 'host' }),
     )
     expect(router.currentRoute.value.path).toBe('/gameover')
+  })
+
+  // --- heartbeat waarschuwing ---
+  it('toont ConnectionWarning als heartbeatLost true is', async () => {
+    setupGameState('host', true)
+    mockPeer.heartbeatLost.value = true
+    mockPeer.secondsSinceLastHeartbeat.value = 20
+    const router = createTestRouter()
+    const wrapper = mount(GameView, { global: { plugins: [router] } })
+    await nextTick()
+
+    expect(wrapper.find('.connection-warning').exists()).toBe(true)
+    expect(wrapper.find('.seconds').text()).toContain('20')
+  })
+
+  it('verbergt ConnectionWarning als heartbeatLost false is', async () => {
+    setupGameState('host', true)
+    mockPeer.heartbeatLost.value = false
+    const router = createTestRouter()
+    const wrapper = mount(GameView, { global: { plugins: [router] } })
+    await nextTick()
+
+    expect(wrapper.find('.connection-warning').exists()).toBe(false)
   })
 
   // --- guest ontvangt shot van host (de bug die eerder vastliep) ---

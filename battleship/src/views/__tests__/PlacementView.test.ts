@@ -28,6 +28,8 @@ function createMockPeer() {
     myPeerId: ref('test-id'),
     errorMessage: ref(''),
     role: ref(null as any),
+    heartbeatLost: ref(false),
+    secondsSinceLastHeartbeat: ref(0),
     initHost: vi.fn(),
     connectToHost: vi.fn(),
     sendMessage: vi.fn(),
@@ -233,5 +235,28 @@ describe('PlacementView', () => {
     await nextTick()
     // Carrier is niet geplaatst
     expect(wrapper.findAll('.ship-item')[0].classes()).not.toContain('placed')
+  })
+
+  // --- heartbeat waarschuwing ---
+  it('toont ConnectionWarning als heartbeatLost true is', async () => {
+    resetGame()
+    mockPeer.heartbeatLost.value = true
+    mockPeer.secondsSinceLastHeartbeat.value = 18
+    const router = createTestRouter()
+    const wrapper = mount(PlacementView, { global: { plugins: [router] } })
+    await nextTick()
+
+    expect(wrapper.find('.connection-warning').exists()).toBe(true)
+    expect(wrapper.find('.seconds').text()).toContain('18')
+  })
+
+  it('verbergt ConnectionWarning als heartbeatLost false is', async () => {
+    resetGame()
+    mockPeer.heartbeatLost.value = false
+    const router = createTestRouter()
+    const wrapper = mount(PlacementView, { global: { plugins: [router] } })
+    await nextTick()
+
+    expect(wrapper.find('.connection-warning').exists()).toBe(false)
   })
 })

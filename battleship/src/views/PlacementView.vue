@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import GameBoard from '../components/GameBoard.vue'
+import ConnectionWarning from '../components/ConnectionWarning.vue'
 import { gameState } from '../game/state'
 import { usePeerConnection } from '../composables/usePeerConnection'
 import { SHIP_DEFINITIONS, type ShipType, type Orientation, type Ship } from '../game/types'
@@ -121,6 +122,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
   <div class="placement">
     <h2>Schepen plaatsen</h2>
     <p class="hint">Selecteer een schip, kies oriëntatie en klik op het bord om te plaatsen.</p>
+
+    <ConnectionWarning
+      v-if="peer.heartbeatLost.value"
+      :seconds-since-last-heartbeat="peer.secondsSinceLastHeartbeat.value"
+    />
 
     <div v-if="waitingForOpponent" class="waiting-overlay">
       <p>Wachten op tegenstander…</p>

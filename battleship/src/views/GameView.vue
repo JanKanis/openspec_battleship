@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import GameBoard from '../components/GameBoard.vue'
+import ConnectionWarning from '../components/ConnectionWarning.vue'
 import { gameState } from '../game/state'
 import { usePeerConnection } from '../composables/usePeerConnection'
 import { fireShot, checkWin } from '../game/logic'
@@ -99,6 +100,11 @@ peer.onDisconnected(() => {
 
 <template>
   <div class="game">
+    <ConnectionWarning
+      v-if="peer.heartbeatLost.value"
+      :seconds-since-last-heartbeat="peer.secondsSinceLastHeartbeat.value"
+    />
+
     <div class="turn-indicator" :class="{ active: gameState.myTurn }">
       {{ gameState.myTurn ? 'Jouw beurt' : 'Tegenstander is aan de beurt…' }}
     </div>

@@ -82,6 +82,8 @@ describe('Full game E2E', () => {
       status: ref('connected'),
       myPeerId: ref('host-id'),
       errorMessage: ref(''),
+      heartbeatLost: ref(false),
+      secondsSinceLastHeartbeat: ref(0),
       sendMessage: vi.fn((msg: any) => {
         if (msg.type === 'ready') {
           // Tegenstander is ook klaar

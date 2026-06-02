@@ -35,6 +35,7 @@ export type GameMessage =
   | { type: 'shot'; x: number; y: number }
   | { type: 'shot-result'; x: number; y: number; hit: boolean; sunk?: ShipType }
   | { type: 'game-over'; winner: 'host' | 'guest' }
+  | { type: 'ping' }
 
 // Vaste ship definities
 export const SHIP_DEFINITIONS: { type: ShipType; name: string; size: number }[] = [
