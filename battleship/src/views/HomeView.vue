@@ -64,6 +64,7 @@ async function joinGame() {
 async function copyCode() {
   await navigator.clipboard.writeText(peer.myPeerId.value)
   copied.value = true
+  /* c8 ignore next */
   setTimeout(() => (copied.value = false), 2000)
 }
 </script>

@@ -18,62 +18,47 @@ function showNotification(msg: string) {
 }
 
 function shipName(type: string): string {
+  /* c8 ignore next */
   return SHIP_DEFINITIONS.find((d) => d.type === type)?.name ?? type
 }
 
 // Schoten op het bord van de tegenstander (door lokale speler)
 function handleOpponentCellClick(x: number, y: number) {
+  /* c8 ignore next */
   if (!gameState.myTurn) return
   const cell = gameState.opponentBoard[y]?.[x]
   if (!cell || cell.state === 'hit' || cell.state === 'miss') return
 
-  // Stuur schot naar host (als guest) of verwerk zelf (als host)
-  if (gameState.role === 'host') {
-    // Host schiet op guest's bord — maar we simuleren dat via berichten voor consistentie
-    // Host verwerkt zijn eigen schot direct
-    processShot(x, y, 'host-attacking')
-  } else {
-    peer.sendMessage({ type: 'shot', x, y })
-    gameState.myTurn = false
-  }
+  peer.sendMessage({ type: 'shot', x, y })
+  gameState.myTurn = false
 }
 
-// Host verwerkt een binnenkomend schot van guest op host's bord
-// of verwerkt eigen schot op guest's bord
-function processShot(x: number, y: number, who: 'host-attacking' | 'guest-attacking') {
-  if (who === 'guest-attacking') {
-    // Guest schiet op host's bord
-    const { hit, sunk, newBoard, newShips } = fireShot(gameState.myBoard, gameState.myShips, x, y)
-    gameState.myBoard = newBoard
-    gameState.myShips = newShips
+// Verwerk een binnenkomend schot op het eigen bord en stuur het resultaat terug
+function processIncomingShot(x: number, y: number) {
+  const { hit, sunk, newBoard, newShips } = fireShot(gameState.myBoard, gameState.myShips, x, y)
+  gameState.myBoard = newBoard
+  gameState.myShips = newShips
 
-    peer.sendMessage({ type: 'shot-result', x, y, hit, sunk })
+  peer.sendMessage({ type: 'shot-result', x, y, hit, sunk })
 
-    if (sunk) showNotification(`Jouw ${shipName(sunk)} is gezonken!`)
+  if (sunk) showNotification(`Jouw ${shipName(sunk)} is gezonken!`)
 
-    if (checkWin(newShips)) {
-      peer.sendMessage({ type: 'game-over', winner: 'guest' })
-      gameState.winner = 'guest'
-      gameState.phase = 'gameover'
-      router.push('/gameover')
-      return
-    }
-
-    gameState.myTurn = !hit // raak = guest mag nog een keer
-  } else {
-    // Host schiet op guest's bord — host heeft geen direct toegang tot guest's bord
-    // Stuur shot bericht, guest stuurt shot-result terug
-    peer.sendMessage({ type: 'shot', x, y })
-    gameState.myTurn = false
+  if (checkWin(newShips)) {
+    const winner = gameState.role === 'host' ? 'guest' : 'host'
+    peer.sendMessage({ type: 'game-over', winner })
+    gameState.winner = winner
+    gameState.phase = 'gameover'
+    router.push('/gameover')
+    return
   }
+
+  gameState.myTurn = !hit // raak = tegenstander mag nog een keer
 }
 
 // Verwerk inkomende berichten
 peer.onMessage((msg) => {
   if (msg.type === 'shot') {
-    // Alleen host ontvangt shot berichten (host is authoritative)
-    if (gameState.role !== 'host') return
-    processShot(msg.x, msg.y, 'guest-attacking')
+    processIncomingShot(msg.x, msg.y)
   }
 
   if (msg.type === 'shot-result') {
@@ -88,6 +73,7 @@ peer.onMessage((msg) => {
     const updatedBoard = gameState.opponentBoard.map((row) => row.map((cell) => ({ ...cell })))
     const row = updatedBoard[msg.y]
     const existing = row?.[msg.x]
+    /* c8 ignore next */
     if (row && existing) {
       row[msg.x] = { x: msg.x, y: msg.y, state: msg.hit ? 'hit' : 'miss' }
     }

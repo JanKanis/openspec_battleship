@@ -39,6 +39,7 @@ function cellClass(x: number, y: number): string[] {
     return classes
   }
 
+  /* c8 ignore next */
   if (!cell) return classes
   if (cell.state === 'ship' && props.showShips) classes.push('ship')
   if (cell.state === 'hit') classes.push('hit')

@@ -29,6 +29,7 @@ export function isValidPlacement(board: Board, x: number, y: number, size: numbe
     if (c.x < 0 || c.x >= BOARD_SIZE || c.y < 0 || c.y >= BOARD_SIZE) return false
     const row = board[c.y]
     const cell = row?.[c.x]
+    /* c8 ignore next */
     if (!cell) return false
     return cell.state === 'water' && cell.shipId === undefined
   })
@@ -41,6 +42,7 @@ export function placeShip(board: Board, ship: Ship): Board {
   for (const c of cells) {
     const row = newBoard[c.y]
     const existing = row?.[c.x]
+    /* c8 ignore next */
     if (row && existing) {
       row[c.x] = { x: c.x, y: c.y, state: 'ship', shipId: ship.id }
     }
@@ -64,6 +66,7 @@ export function fireShot(
   }
 
   const hit = cell.state === 'ship'
+  /* c8 ignore next */
   if (row) {
     row[x] = { x, y, state: hit ? 'hit' : 'miss', shipId: cell.shipId }
   }

@@ -1,6 +1,6 @@
 # Lokale bestanden
 opencode-desktop-linux-amd64.deb
-openspec_workshop_notes.txt
+notes/
 
 # Node
 battleship/node_modules/
