@@ -2,10 +2,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePeerConnection } from '../composables/usePeerConnection'
+import { useLocale } from '../composables/useLocale'
 import { gameState, connectionError, resetGame } from '../game/state'
 
 const router = useRouter()
 const peer = usePeerConnection()
+const { t } = useLocale()
 
 type Mode = 'idle' | 'hosting' | 'joining'
 const mode = ref<Mode>('idle')
@@ -29,11 +31,11 @@ async function startHost() {
     })
 
     peer.onDisconnected(() => {
-      connectionError.value = 'Verbinding verbroken.'
+      connectionError.value = t('home.errorDisconnected')
       mode.value = 'idle'
     })
   } catch {
-    connectionError.value = 'Kon geen lobby aanmaken. Probeer opnieuw.'
+    connectionError.value = t('home.errorHostFailed')
     mode.value = 'idle'
   }
 }
@@ -50,12 +52,12 @@ async function joinGame() {
     gameState.myTurn = false // guest wacht
 
     peer.onDisconnected(() => {
-      connectionError.value = 'Verbinding verbroken.'
+      connectionError.value = t('home.errorDisconnected')
     })
 
     router.push('/placement')
   } catch {
-    connectionError.value = 'Kan niet verbinden. Controleer de game-code en probeer opnieuw.'
+    connectionError.value = t('home.errorConnectFailed')
   } finally {
     isConnecting.value = false
   }
@@ -71,46 +73,46 @@ async function copyCode() {
 
 <template>
   <div class="home">
-    <h1>⚓ Zeeslag</h1>
-    <p class="subtitle">Multiplayer Battleship via P2P</p>
+    <h1>{{ t('home.title') }}</h1>
+    <p class="subtitle">{{ t('home.subtitle') }}</p>
 
     <div v-if="connectionError" class="error">{{ connectionError }}</div>
 
     <!-- Startmenu -->
     <div v-if="mode === 'idle'" class="menu">
-      <button class="btn primary" @click="startHost">Nieuw spel</button>
-      <button class="btn secondary" @click="mode = 'joining'">Verbinden</button>
+      <button class="btn primary" @click="startHost">{{ t('home.newGame') }}</button>
+      <button class="btn secondary" @click="mode = 'joining'">{{ t('home.connect') }}</button>
     </div>
 
     <!-- Host wacht -->
     <div v-else-if="mode === 'hosting'" class="lobby">
-      <p>Jouw game-code:</p>
+      <p>{{ t('home.yourCode') }}</p>
       <div class="code-box">
         <span class="code">{{ peer.myPeerId.value || '…' }}</span>
         <button class="btn small" :disabled="!peer.myPeerId.value" @click="copyCode">
-          {{ copied ? 'Gekopieerd!' : 'Kopieer' }}
+          {{ copied ? t('home.copied') : t('home.copy') }}
         </button>
       </div>
-      <p class="hint">Stuur deze code naar je tegenstander.</p>
-      <p class="waiting">Wachten op tegenstander…</p>
-      <button class="btn ghost" @click="mode = 'idle'">Annuleren</button>
+      <p class="hint">{{ t('home.sendCode') }}</p>
+      <p class="waiting">{{ t('home.waiting') }}</p>
+      <button class="btn ghost" @click="mode = 'idle'">{{ t('home.cancel') }}</button>
     </div>
 
     <!-- Guest voert code in -->
     <div v-else-if="mode === 'joining'" class="join">
-      <label for="code-input">Game-code:</label>
+      <label for="code-input">{{ t('home.codeLabel') }}</label>
       <input
         id="code-input"
         v-model="guestCode"
         type="text"
-        placeholder="Plak de code hier"
+        :placeholder="t('home.codePlaceholder')"
         @keyup.enter="joinGame"
       />
       <div class="join-actions">
         <button class="btn primary" :disabled="isConnecting || !guestCode.trim()" @click="joinGame">
-          {{ isConnecting ? 'Verbinden…' : 'Verbinden' }}
+          {{ isConnecting ? t('home.connecting') : t('home.connect') }}
         </button>
-        <button class="btn ghost" @click="mode = 'idle'">Terug</button>
+        <button class="btn ghost" @click="mode = 'idle'">{{ t('home.back') }}</button>
       </div>
     </div>
   </div>

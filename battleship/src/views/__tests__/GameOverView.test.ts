@@ -5,8 +5,11 @@ import { ref } from 'vue'
 import GameOverView from '../GameOverView.vue'
 import { gameState, resetGame } from '../../game/state'
 import { usePeerConnection } from '../../composables/usePeerConnection'
+import { useLocale } from '../../composables/useLocale'
+import { translations } from '../../i18n/translations'
 
 vi.mock('../../composables/usePeerConnection')
+vi.mock('../../composables/useLocale')
 
 function createTestRouter() {
   return createRouter({
@@ -16,6 +19,13 @@ function createTestRouter() {
       { path: '/gameover', component: GameOverView },
     ],
   })
+}
+
+function mockT(key: string) {
+  const keys = key.split('.')
+  let obj: any = translations.nl
+  for (const k of keys) obj = obj?.[k]
+  return typeof obj === 'string' ? obj : key
 }
 
 describe('GameOverView', () => {
@@ -33,6 +43,11 @@ describe('GameOverView', () => {
       onDisconnected: vi.fn(),
       destroy: vi.fn(),
     } as any)
+    vi.mocked(useLocale).mockReturnValue({
+      locale: ref('nl') as any,
+      t: mockT,
+      setLocale: vi.fn(),
+    })
   })
 
   it('toont winnaar-bericht als lokale speler heeft gewonnen', () => {

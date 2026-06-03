@@ -5,11 +5,13 @@ import GameBoard from '../components/GameBoard.vue'
 import ConnectionWarning from '../components/ConnectionWarning.vue'
 import { gameState } from '../game/state'
 import { usePeerConnection } from '../composables/usePeerConnection'
+import { useLocale } from '../composables/useLocale'
 import { SHIP_DEFINITIONS, type ShipType, type Orientation, type Ship } from '../game/types'
 import { isValidPlacement, placeShip, createBoard } from '../game/logic'
 
 const router = useRouter()
 const peer = usePeerConnection()
+const { t } = useLocale()
 
 // Schepen lijst met plaatsingsstatus
 const ships = ref(
@@ -120,8 +122,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
 
 <template>
   <div class="placement">
-    <h2>Schepen plaatsen</h2>
-    <p class="hint">Selecteer een schip, kies oriëntatie en klik op het bord om te plaatsen.</p>
+    <h2>{{ t('placement.title') }}</h2>
+    <p class="hint">{{ t('placement.hint') }}</p>
 
     <ConnectionWarning
       v-if="peer.heartbeatLost.value"
@@ -129,27 +131,27 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
     />
 
     <div v-if="waitingForOpponent" class="waiting-overlay">
-      <p>Wachten op tegenstander…</p>
+      <p>{{ t('placement.waiting') }}</p>
     </div>
 
     <div class="layout">
       <!-- Schepen lijst -->
       <div class="ship-list">
-        <h3>Schepen</h3>
+        <h3>{{ t('placement.ships') }}</h3>
         <div
           v-for="ship in ships"
           :key="ship.id"
           :class="['ship-item', { selected: selectedShipId === ship.id, placed: ship.placed }]"
           @click="selectShip(ship.id)"
         >
-          <span class="ship-name">{{ SHIP_DEFINITIONS.find(d => d.type === ship.type)?.name }}</span>
-          <span class="ship-size">{{ ship.size }} vakjes</span>
+          <span class="ship-name">{{ t('ships.' + ship.type) }}</span>
+          <span class="ship-size">{{ ship.size }} {{ t('placement.cells') }}</span>
           <span v-if="ship.placed" class="ship-status">✓</span>
         </div>
 
         <div class="controls">
           <button class="btn secondary" @click="toggleOrientation">
-            Roteren ({{ orientation === 'horizontal' ? '↔' : '↕' }}) <kbd>R</kbd>
+            {{ t('placement.rotate') }} ({{ orientation === 'horizontal' ? '↔' : '↕' }}) <kbd>R</kbd>
           </button>
         </div>
 
@@ -158,7 +160,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
           class="btn primary"
           @click="confirmReady"
         >
-          Klaar!
+          {{ t('placement.ready') }}
         </button>
       </div>
 

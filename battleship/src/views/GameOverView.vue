@@ -2,9 +2,11 @@
 import { useRouter } from 'vue-router'
 import { gameState, resetGame } from '../game/state'
 import { usePeerConnection } from '../composables/usePeerConnection'
+import { useLocale } from '../composables/useLocale'
 
 const router = useRouter()
 const peer = usePeerConnection()
+const { t } = useLocale()
 
 const won = gameState.winner === gameState.role
 
@@ -19,9 +21,9 @@ function playAgain() {
   <div class="gameover">
     <div class="result-card">
       <div class="result-icon">{{ won ? '🏆' : '💀' }}</div>
-      <h1>{{ won ? 'Je hebt gewonnen!' : 'Je hebt verloren.' }}</h1>
-      <p class="sub">{{ won ? 'Alle schepen van de tegenstander zijn gezonken.' : 'Al jouw schepen zijn gezonken.' }}</p>
-      <button class="btn primary" @click="playAgain">Opnieuw spelen</button>
+      <h1>{{ won ? t('gameover.won') : t('gameover.lost') }}</h1>
+      <p class="sub">{{ won ? t('gameover.wonSub') : t('gameover.lostSub') }}</p>
+      <button class="btn primary" @click="playAgain">{{ t('gameover.playAgain') }}</button>
     </div>
   </div>
 </template>

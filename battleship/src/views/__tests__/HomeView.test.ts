@@ -4,8 +4,11 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { nextTick, ref } from 'vue'
 import HomeView from '../HomeView.vue'
 import { usePeerConnection } from '../../composables/usePeerConnection'
+import { useLocale } from '../../composables/useLocale'
+import { translations } from '../../i18n/translations'
 
 vi.mock('../../composables/usePeerConnection')
+vi.mock('../../composables/useLocale')
 
 function createTestRouter() {
   return createRouter({
@@ -46,6 +49,16 @@ describe('HomeView', () => {
   beforeEach(() => {
     mockPeer = createMockPeer()
     vi.mocked(usePeerConnection).mockReturnValue(mockPeer as any)
+    vi.mocked(useLocale).mockReturnValue({
+      locale: ref('nl') as any,
+      t: (key: string) => {
+        const keys = key.split('.')
+        let obj: any = translations.nl
+        for (const k of keys) obj = obj?.[k]
+        return typeof obj === 'string' ? obj : key
+      },
+      setLocale: vi.fn(),
+    })
     // Mock clipboard
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: vi.fn().mockResolvedValue(undefined) },

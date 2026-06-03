@@ -5,11 +5,13 @@ import GameBoard from '../components/GameBoard.vue'
 import ConnectionWarning from '../components/ConnectionWarning.vue'
 import { gameState } from '../game/state'
 import { usePeerConnection } from '../composables/usePeerConnection'
+import { useLocale } from '../composables/useLocale'
 import { fireShot, checkWin } from '../game/logic'
 import { SHIP_DEFINITIONS } from '../game/types'
 
 const router = useRouter()
 const peer = usePeerConnection()
+const { t } = useLocale()
 
 const notification = ref('')
 
@@ -20,7 +22,7 @@ function showNotification(msg: string) {
 
 function shipName(type: string): string {
   /* c8 ignore next */
-  return SHIP_DEFINITIONS.find((d) => d.type === type)?.name ?? type
+  return t(`ships.${type}`) || (SHIP_DEFINITIONS.find((d) => d.type === type)?.name ?? type)
 }
 
 // Schoten op het bord van de tegenstander (door lokale speler)
@@ -42,7 +44,7 @@ function processIncomingShot(x: number, y: number) {
 
   peer.sendMessage({ type: 'shot-result', x, y, hit, sunk })
 
-  if (sunk) showNotification(`Jouw ${shipName(sunk)} is gezonken!`)
+  if (sunk) showNotification(t('game.yourShipSunk', { ship: shipName(sunk) }))
 
   if (checkWin(newShips)) {
     const winner = gameState.role === 'host' ? 'guest' : 'host'
@@ -63,14 +65,6 @@ peer.onMessage((msg) => {
   }
 
   if (msg.type === 'shot-result') {
-    // Update het opponentBoard (de schutter is de lokale speler)
-    const { hit, sunk, newBoard, newShips } = fireShot(
-      gameState.opponentBoard,
-      [], // opponentBoard heeft geen ships array — we updaten enkel de cel
-      msg.x,
-      msg.y,
-    )
-    // Handmatig updaten want we kennen het schip van de tegenstander niet
     const updatedBoard = gameState.opponentBoard.map((row) => row.map((cell) => ({ ...cell })))
     const row = updatedBoard[msg.y]
     const existing = row?.[msg.x]
@@ -80,7 +74,7 @@ peer.onMessage((msg) => {
     }
     gameState.opponentBoard = updatedBoard
 
-    if (msg.sunk) showNotification(`${shipName(msg.sunk)} van de tegenstander gezonken!`)
+    if (msg.sunk) showNotification(t('game.opponentShipSunk', { ship: shipName(msg.sunk) }))
 
     gameState.myTurn = msg.hit // raak = zelfde speler mag nog een keer
   }
@@ -93,7 +87,7 @@ peer.onMessage((msg) => {
 })
 
 peer.onDisconnected(() => {
-  showNotification('Verbinding verbroken — spel beëindigd.')
+  showNotification(t('game.disconnected'))
   setTimeout(() => router.push('/'), 2000)
 })
 </script>
@@ -106,14 +100,14 @@ peer.onDisconnected(() => {
     />
 
     <div class="turn-indicator" :class="{ active: gameState.myTurn }">
-      {{ gameState.myTurn ? 'Jouw beurt' : 'Tegenstander is aan de beurt…' }}
+      {{ gameState.myTurn ? t('game.yourTurn') : t('game.opponentTurn') }}
     </div>
 
     <div v-if="notification" class="notification">{{ notification }}</div>
 
     <div class="boards">
       <div class="board-section">
-        <h3>Jouw bord</h3>
+        <h3>{{ t('game.yourBoard') }}</h3>
         <GameBoard
           :board="gameState.myBoard"
           :show-ships="true"
@@ -122,7 +116,7 @@ peer.onDisconnected(() => {
       </div>
 
       <div class="board-section">
-        <h3>Tegenstander</h3>
+        <h3>{{ t('game.opponentBoard') }}</h3>
         <GameBoard
           :board="gameState.opponentBoard"
           :show-ships="false"

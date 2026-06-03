@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { usePeerConnection } from '../composables/usePeerConnection'
+import { useLocale } from '../composables/useLocale'
 
 const props = defineProps<{
   secondsSinceLastHeartbeat: number
@@ -8,6 +9,7 @@ const props = defineProps<{
 
 const router = useRouter()
 const peer = usePeerConnection()
+const { t } = useLocale()
 
 function abortGame() {
   peer.destroy()
@@ -18,12 +20,12 @@ function abortGame() {
 <template>
   <div class="connection-warning">
     <p class="warning-text">
-      Geen verbinding — wachten op tegenstander
+      {{ t('warning.noConnection') }}
     </p>
     <p class="seconds">
-      {{ props.secondsSinceLastHeartbeat }} seconden geen verbinding
+      {{ props.secondsSinceLastHeartbeat }} {{ t('warning.seconds') }}
     </p>
-    <button class="btn abort" @click="abortGame">Spel afbreken</button>
+    <button class="btn abort" @click="abortGame">{{ t('warning.abort') }}</button>
   </div>
 </template>
 

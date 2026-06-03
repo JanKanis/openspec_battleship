@@ -6,9 +6,12 @@ import GameView from '../GameView.vue'
 import { gameState, resetGame } from '../../game/state'
 import { createBoard, placeShip } from '../../game/logic'
 import { usePeerConnection } from '../../composables/usePeerConnection'
+import { useLocale } from '../../composables/useLocale'
+import { translations } from '../../i18n/translations'
 import type { Ship } from '../../game/types'
 
 vi.mock('../../composables/usePeerConnection')
+vi.mock('../../composables/useLocale')
 
 function createTestRouter() {
   return createRouter({
@@ -64,6 +67,22 @@ describe('GameView', () => {
   beforeEach(() => {
     mockPeer = createMockPeer()
     vi.mocked(usePeerConnection).mockReturnValue(mockPeer as any)
+    vi.mocked(useLocale).mockReturnValue({
+      locale: ref('nl') as any,
+      t: (key: string, vars?: Record<string, string>) => {
+        const keys = key.split('.')
+        let obj: any = translations.nl
+        for (const k of keys) obj = obj?.[k]
+        let result = typeof obj === 'string' ? obj : key
+        if (vars) {
+          for (const [k, v] of Object.entries(vars)) {
+            result = result.replace(`{${k}}`, v)
+          }
+        }
+        return result
+      },
+      setLocale: vi.fn(),
+    })
   })
 
   // --- Schietflow ---

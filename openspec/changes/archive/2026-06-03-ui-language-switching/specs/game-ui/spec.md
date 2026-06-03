@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Startscherm met keuze host of guest
 Het systeem SHALL bij het openen een startscherm tonen met de keuze om een nieuw spel te starten of te verbinden. Alle teksten worden weergegeven in de actieve taal.

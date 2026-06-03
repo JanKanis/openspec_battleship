@@ -13,6 +13,8 @@ import { nextTick, ref } from 'vue'
 
 import { gameState, resetGame } from '../game/state'
 import { usePeerConnection } from '../composables/usePeerConnection'
+import { useLocale } from '../composables/useLocale'
+import { translations } from '../i18n/translations'
 import { SHIP_DEFINITIONS, type Ship, type ShipType } from '../game/types'
 import { createBoard, placeShip, fireShot } from '../game/logic'
 
@@ -21,6 +23,7 @@ import GameView from '../views/GameView.vue'
 import GameOverView from '../views/GameOverView.vue'
 
 vi.mock('../composables/usePeerConnection')
+vi.mock('../composables/useLocale')
 
 // ---------------------------------------------------------------------------
 // Hulpfuncties
@@ -69,6 +72,20 @@ function createTestRouter() {
 describe('Full game E2E', () => {
   beforeEach(() => {
     resetGame()
+    vi.mocked(useLocale).mockReturnValue({
+      locale: ref('nl') as any,
+      t: (key: string, vars?: Record<string, string>) => {
+        const keys = key.split('.')
+        let obj: any = translations.nl
+        for (const k of keys) obj = obj?.[k]
+        let result = typeof obj === 'string' ? obj : key
+        if (vars) {
+          for (const [k, v] of Object.entries(vars)) result = result.replace(`{${k}}`, v)
+        }
+        return result
+      },
+      setLocale: vi.fn(),
+    })
   })
 
   it('speelt een volledig spel: plaatsing → schietfase met rake/gemiste schoten van beide kanten → game-over', async () => {
