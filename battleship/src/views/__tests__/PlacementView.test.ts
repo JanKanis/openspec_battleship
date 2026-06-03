@@ -4,11 +4,11 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { nextTick, ref } from 'vue'
 import PlacementView from '../PlacementView.vue'
 import { gameState, resetGame } from '../../game/state'
-import { usePeerConnection } from '../../composables/usePeerConnection'
+import { useGameConnection } from '../../composables/useGameConnection'
 import { useLocale } from '../../composables/useLocale'
 import { translations } from '../../i18n/translations'
 
-vi.mock('../../composables/usePeerConnection')
+vi.mock('../../composables/useGameConnection')
 vi.mock('../../composables/useLocale')
 
 function createTestRouter() {
@@ -22,22 +22,16 @@ function createTestRouter() {
   })
 }
 
-function createMockPeer() {
+function createMockConn() {
   let messageHandler: ((msg: any) => void) | null = null
   let disconnectedHandler: (() => void) | null = null
 
   const mock = {
-    status: ref('connected'),
-    myPeerId: ref('test-id'),
-    errorMessage: ref(''),
-    role: ref(null as any),
     heartbeatLost: ref(false),
     secondsSinceLastHeartbeat: ref(0),
-    initHost: vi.fn(),
-    connectToHost: vi.fn(),
+    isAI: false,
     sendMessage: vi.fn(),
     onMessage: vi.fn((cb: any) => { messageHandler = cb }),
-    onConnected: vi.fn(),
     onDisconnected: vi.fn((cb: any) => { disconnectedHandler = cb }),
     destroy: vi.fn(),
     _triggerMessage: (msg: any) => messageHandler?.(msg),
@@ -62,13 +56,13 @@ async function placeAllShips(wrapper: any) {
 }
 
 describe('PlacementView', () => {
-  let mockPeer: ReturnType<typeof createMockPeer>
+  let mockConn: ReturnType<typeof createMockConn>
 
   beforeEach(() => {
     resetGame()
     gameState.role = 'host'
-    mockPeer = createMockPeer()
-    vi.mocked(usePeerConnection).mockReturnValue(mockPeer as any)
+    mockConn = createMockConn()
+    vi.mocked(useGameConnection).mockReturnValue(mockConn as any)
     vi.mocked(useLocale).mockReturnValue({
       locale: ref('nl') as any,
       t: (key: string) => {
@@ -128,7 +122,7 @@ describe('PlacementView', () => {
     const wrapper = mount(PlacementView, { global: { plugins: [router] } })
     await placeAllShips(wrapper)
     await wrapper.find('button.btn.primary').trigger('click')
-    expect(mockPeer.sendMessage).toHaveBeenCalledWith({ type: 'ready' })
+    expect(mockConn.sendMessage).toHaveBeenCalledWith({ type: 'ready' })
   })
 
   it('navigeert naar /game: eigen klaar eerst, daarna ready ontvangen', async () => {
@@ -144,7 +138,7 @@ describe('PlacementView', () => {
     expect(router.currentRoute.value.path).toBe('/placement')
 
     // Tegenstander stuurt ready
-    mockPeer._triggerMessage({ type: 'ready' })
+    mockConn._triggerMessage({ type: 'ready' })
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/game')
@@ -157,7 +151,7 @@ describe('PlacementView', () => {
     await placeAllShips(wrapper)
 
     // Tegenstander stuurt ready vóór dat we op Klaar klikken
-    mockPeer._triggerMessage({ type: 'ready' })
+    mockConn._triggerMessage({ type: 'ready' })
     await flushPromises()
 
     // Nog niet genavigeerd
@@ -175,7 +169,7 @@ describe('PlacementView', () => {
     await router.push('/placement')
     mount(PlacementView, { global: { plugins: [router] } })
 
-    mockPeer._triggerDisconnected()
+    mockConn._triggerDisconnected()
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/')
@@ -253,8 +247,8 @@ describe('PlacementView', () => {
   // --- heartbeat waarschuwing ---
   it('toont ConnectionWarning als heartbeatLost true is', async () => {
     resetGame()
-    mockPeer.heartbeatLost.value = true
-    mockPeer.secondsSinceLastHeartbeat.value = 18
+    mockConn.heartbeatLost.value = true
+    mockConn.secondsSinceLastHeartbeat.value = 18
     const router = createTestRouter()
     const wrapper = mount(PlacementView, { global: { plugins: [router] } })
     await nextTick()
@@ -265,7 +259,7 @@ describe('PlacementView', () => {
 
   it('verbergt ConnectionWarning als heartbeatLost false is', async () => {
     resetGame()
-    mockPeer.heartbeatLost.value = false
+    mockConn.heartbeatLost.value = false
     const router = createTestRouter()
     const wrapper = mount(PlacementView, { global: { plugins: [router] } })
     await nextTick()

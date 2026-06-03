@@ -4,13 +4,14 @@ import { useRouter } from 'vue-router'
 import GameBoard from '../components/GameBoard.vue'
 import ConnectionWarning from '../components/ConnectionWarning.vue'
 import { gameState } from '../game/state'
-import { usePeerConnection } from '../composables/usePeerConnection'
+import { usePeerConnection as _usePeerConnection } from '../composables/usePeerConnection'
+import { useGameConnection } from '../composables/useGameConnection'
 import { useLocale } from '../composables/useLocale'
 import { fireShot, checkWin } from '../game/logic'
 import { SHIP_DEFINITIONS } from '../game/types'
 
 const router = useRouter()
-const peer = usePeerConnection()
+const peer = useGameConnection()
 const { t } = useLocale()
 
 const notification = ref('')
@@ -95,7 +96,7 @@ peer.onDisconnected(() => {
 <template>
   <div class="game">
     <ConnectionWarning
-      v-if="peer.heartbeatLost.value"
+      v-if="!peer.isAI && peer.heartbeatLost.value"
       :seconds-since-last-heartbeat="peer.secondsSinceLastHeartbeat.value"
     />
 

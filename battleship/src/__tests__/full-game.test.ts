@@ -12,7 +12,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { nextTick, ref } from 'vue'
 
 import { gameState, resetGame } from '../game/state'
-import { usePeerConnection } from '../composables/usePeerConnection'
+import { useGameConnection } from '../composables/useGameConnection'
 import { useLocale } from '../composables/useLocale'
 import { translations } from '../i18n/translations'
 import { SHIP_DEFINITIONS, type Ship, type ShipType } from '../game/types'
@@ -22,7 +22,7 @@ import PlacementView from '../views/PlacementView.vue'
 import GameView from '../views/GameView.vue'
 import GameOverView from '../views/GameOverView.vue'
 
-vi.mock('../composables/usePeerConnection')
+vi.mock('../composables/useGameConnection')
 vi.mock('../composables/useLocale')
 
 // ---------------------------------------------------------------------------
@@ -95,12 +95,10 @@ describe('Full game E2E', () => {
     // messageHandler wijst altijd naar de handler van de huidig gemounte view
     let messageHandler: ((msg: any) => void) | null = null
 
-    const mockPeer = {
-      status: ref('connected'),
-      myPeerId: ref('host-id'),
-      errorMessage: ref(''),
+    const mockConn = {
       heartbeatLost: ref(false),
       secondsSinceLastHeartbeat: ref(0),
+      isAI: false,
       sendMessage: vi.fn((msg: any) => {
         if (msg.type === 'ready') {
           // Tegenstander is ook klaar
@@ -135,12 +133,11 @@ describe('Full game E2E', () => {
       onMessage: vi.fn((cb: any) => {
         messageHandler = cb
       }),
-      onConnected: vi.fn(),
       onDisconnected: vi.fn(),
       destroy: vi.fn(),
     }
 
-    vi.mocked(usePeerConnection).mockReturnValue(mockPeer as any)
+    vi.mocked(useGameConnection).mockReturnValue(mockConn as any)
 
     // -----------------------------------------------------------------------
     // FASE 1: Plaatsing

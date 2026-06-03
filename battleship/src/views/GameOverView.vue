@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { gameState, resetGame } from '../game/state'
-import { usePeerConnection } from '../composables/usePeerConnection'
+import { useGameConnection } from '../composables/useGameConnection'
 import { useLocale } from '../composables/useLocale'
 
 const router = useRouter()
-const peer = usePeerConnection()
+const conn = useGameConnection()
 const { t } = useLocale()
 
 const won = gameState.winner === gameState.role
 
 function playAgain() {
-  peer.destroy()
+  conn.destroy()
   resetGame()
   router.push('/')
 }

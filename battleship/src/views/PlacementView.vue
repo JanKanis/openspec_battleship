@@ -4,13 +4,14 @@ import { useRouter } from 'vue-router'
 import GameBoard from '../components/GameBoard.vue'
 import ConnectionWarning from '../components/ConnectionWarning.vue'
 import { gameState } from '../game/state'
-import { usePeerConnection } from '../composables/usePeerConnection'
+import { usePeerConnection as _usePeerConnection } from '../composables/usePeerConnection'
+import { useGameConnection } from '../composables/useGameConnection'
 import { useLocale } from '../composables/useLocale'
 import { SHIP_DEFINITIONS, type ShipType, type Orientation, type Ship } from '../game/types'
 import { isValidPlacement, placeShip, createBoard } from '../game/logic'
 
 const router = useRouter()
-const peer = usePeerConnection()
+const peer = useGameConnection()
 const { t } = useLocale()
 
 // Schepen lijst met plaatsingsstatus
@@ -126,7 +127,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
     <p class="hint">{{ t('placement.hint') }}</p>
 
     <ConnectionWarning
-      v-if="peer.heartbeatLost.value"
+      v-if="!peer.isAI && peer.heartbeatLost.value"
       :seconds-since-last-heartbeat="peer.secondsSinceLastHeartbeat.value"
     />
 

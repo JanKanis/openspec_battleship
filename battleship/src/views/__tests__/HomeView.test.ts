@@ -6,9 +6,21 @@ import HomeView from '../HomeView.vue'
 import { usePeerConnection } from '../../composables/usePeerConnection'
 import { useLocale } from '../../composables/useLocale'
 import { translations } from '../../i18n/translations'
+import { setGameConnection, clearGameConnection } from '../../composables/useGameConnection'
+import { createAIConnection } from '../../composables/useAIConnection'
 
 vi.mock('../../composables/usePeerConnection')
 vi.mock('../../composables/useLocale')
+vi.mock('../../composables/useGameConnection', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../composables/useGameConnection')>()
+  return { ...actual, setGameConnection: vi.fn(), clearGameConnection: vi.fn() }
+})
+vi.mock('../../composables/useAIConnection', () => ({
+  createAIConnection: vi.fn(() => ({ isAI: true, heartbeatLost: ref(false), secondsSinceLastHeartbeat: ref(0), sendMessage: vi.fn(), onMessage: vi.fn(), onDisconnected: vi.fn(), destroy: vi.fn() })),
+}))
+vi.mock('../../composables/PeerGameConnection', () => ({
+  createPeerGameConnection: vi.fn(() => ({ isAI: false, heartbeatLost: ref(false), secondsSinceLastHeartbeat: ref(0), sendMessage: vi.fn(), onMessage: vi.fn(), onDisconnected: vi.fn(), destroy: vi.fn() })),
+}))
 
 function createTestRouter() {
   return createRouter({
@@ -253,6 +265,31 @@ describe('HomeView', () => {
     await wrapper.find('button.btn.secondary').trigger('click')
     await nextTick()
     expect(wrapper.find('button.btn.primary[disabled]').exists()).toBe(true)
+  })
+
+  it('"Solo spelen" knop is zichtbaar op het startscherm', () => {
+    const router = createTestRouter()
+    const wrapper = mount(HomeView, { global: { plugins: [router] } })
+    expect(wrapper.find('button.btn.solo').exists()).toBe(true)
+    expect(wrapper.find('button.btn.solo').text()).toContain('Solo')
+  })
+
+  it('klik "Solo spelen" → navigeert naar /placement', async () => {
+    const router = createTestRouter()
+    await router.push('/')
+    const wrapper = mount(HomeView, { global: { plugins: [router] } })
+    await wrapper.find('button.btn.solo').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/placement')
+  })
+
+  it('klik "Solo spelen" → createAIConnection aangemaakt en setGameConnection aangeroepen', async () => {
+    const router = createTestRouter()
+    const wrapper = mount(HomeView, { global: { plugins: [router] } })
+    await wrapper.find('button.btn.solo').trigger('click')
+    await nextTick()
+    expect(vi.mocked(createAIConnection)).toHaveBeenCalled()
+    expect(vi.mocked(setGameConnection)).toHaveBeenCalled()
   })
 })
 

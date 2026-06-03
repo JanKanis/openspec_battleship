@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router'
 import { usePeerConnection } from '../composables/usePeerConnection'
 import { useLocale } from '../composables/useLocale'
 import { gameState, connectionError, resetGame } from '../game/state'
+import { setGameConnection, clearGameConnection } from '../composables/useGameConnection'
+import { createPeerGameConnection } from '../composables/PeerGameConnection'
+import { createAIConnection } from '../composables/useAIConnection'
 
 const router = useRouter()
 const peer = usePeerConnection()
@@ -16,6 +19,7 @@ const copied = ref(false)
 const isConnecting = ref(false)
 
 resetGame()
+clearGameConnection()
 
 async function startHost() {
   mode.value = 'hosting'
@@ -25,6 +29,7 @@ async function startHost() {
     gameState.role = 'host'
 
     peer.onConnected(() => {
+      setGameConnection(createPeerGameConnection())
       gameState.phase = 'placement'
       gameState.myTurn = true // host begint
       router.push('/placement')
@@ -47,6 +52,7 @@ async function joinGame() {
   connectionError.value = ''
   try {
     await peer.connectToHost(code)
+    setGameConnection(createPeerGameConnection())
     gameState.role = 'guest'
     gameState.phase = 'placement'
     gameState.myTurn = false // guest wacht
@@ -69,6 +75,16 @@ async function copyCode() {
   /* c8 ignore next */
   setTimeout(() => (copied.value = false), 2000)
 }
+
+function startSolo() {
+  connectionError.value = ''
+  const playerGoesFirst = Math.random() < 0.5
+  gameState.role = 'host'
+  gameState.phase = 'placement'
+  gameState.myTurn = playerGoesFirst
+  setGameConnection(createAIConnection(playerGoesFirst))
+  router.push('/placement')
+}
 </script>
 
 <template>
@@ -82,6 +98,7 @@ async function copyCode() {
     <div v-if="mode === 'idle'" class="menu">
       <button class="btn primary" @click="startHost">{{ t('home.newGame') }}</button>
       <button class="btn secondary" @click="mode = 'joining'">{{ t('home.connect') }}</button>
+      <button class="btn solo" @click="startSolo">{{ t('home.solo') }}</button>
     </div>
 
     <!-- Host wacht -->
@@ -187,6 +204,7 @@ h1 { font-size: 2.5rem; margin: 0; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn.primary { background: #1a73e8; color: white; }
 .btn.secondary { background: #34a853; color: white; }
+.btn.solo { background: #f9ab00; color: white; }
 .btn.ghost { background: transparent; color: #555; border: 1px solid #ccc; }
 .btn.small { padding: 0.3rem 0.7rem; font-size: 0.85rem; background: #1a73e8; color: white; }
 </style>

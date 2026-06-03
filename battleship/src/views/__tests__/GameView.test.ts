@@ -5,12 +5,13 @@ import { nextTick, ref } from 'vue'
 import GameView from '../GameView.vue'
 import { gameState, resetGame } from '../../game/state'
 import { createBoard, placeShip } from '../../game/logic'
-import { usePeerConnection } from '../../composables/usePeerConnection'
+import { usePeerConnection as _usePeerConnection } from '../../composables/usePeerConnection'
+import { useGameConnection } from '../../composables/useGameConnection'
 import { useLocale } from '../../composables/useLocale'
 import { translations } from '../../i18n/translations'
 import type { Ship } from '../../game/types'
 
-vi.mock('../../composables/usePeerConnection')
+vi.mock('../../composables/useGameConnection')
 vi.mock('../../composables/useLocale')
 
 function createTestRouter() {
@@ -24,22 +25,16 @@ function createTestRouter() {
   })
 }
 
-function createMockPeer() {
+function createMockConn() {
   let messageHandler: ((msg: any) => void) | null = null
   let disconnectedHandler: (() => void) | null = null
 
   const mock = {
-    status: ref('connected'),
-    myPeerId: ref(''),
-    errorMessage: ref(''),
-    role: ref(null as any),
     heartbeatLost: ref(false),
     secondsSinceLastHeartbeat: ref(0),
-    initHost: vi.fn(),
-    connectToHost: vi.fn(),
+    isAI: false,
     sendMessage: vi.fn(),
     onMessage: vi.fn((cb: any) => { messageHandler = cb }),
-    onConnected: vi.fn(),
     onDisconnected: vi.fn((cb: any) => { disconnectedHandler = cb }),
     destroy: vi.fn(),
     _triggerMessage: (msg: any) => messageHandler?.(msg),
@@ -62,11 +57,11 @@ function setupGameState(role: 'host' | 'guest', myTurn: boolean) {
 }
 
 describe('GameView', () => {
-  let mockPeer: ReturnType<typeof createMockPeer>
+  let mockConn: ReturnType<typeof createMockConn>
 
   beforeEach(() => {
-    mockPeer = createMockPeer()
-    vi.mocked(usePeerConnection).mockReturnValue(mockPeer as any)
+    mockConn = createMockConn()
+    vi.mocked(useGameConnection).mockReturnValue(mockConn as any)
     vi.mocked(useLocale).mockReturnValue({
       locale: ref('nl') as any,
       t: (key: string, vars?: Record<string, string>) => {
@@ -97,7 +92,7 @@ describe('GameView', () => {
     const opponentCells = boards[1].findAll('.cell')
     await opponentCells[0].trigger('click')
 
-    expect(mockPeer.sendMessage).toHaveBeenCalledWith({ type: 'shot', x: 0, y: 0 })
+    expect(mockConn.sendMessage).toHaveBeenCalledWith({ type: 'shot', x: 0, y: 0 })
     expect(gameState.myTurn).toBe(false)
   })
 
@@ -111,7 +106,7 @@ describe('GameView', () => {
     const opponentCells = boards[1].findAll('.cell')
     await opponentCells[0].trigger('click')
 
-    expect(mockPeer.sendMessage).not.toHaveBeenCalled()
+    expect(mockConn.sendMessage).not.toHaveBeenCalled()
   })
 
   it('klik op cel die al hit is → geen bericht gestuurd', async () => {
@@ -125,7 +120,7 @@ describe('GameView', () => {
     const opponentCells = boards[1].findAll('.cell')
     await opponentCells[0].trigger('click')
 
-    expect(mockPeer.sendMessage).not.toHaveBeenCalled()
+    expect(mockConn.sendMessage).not.toHaveBeenCalled()
   })
 
   it('klik op cel die al miss is → geen bericht gestuurd', async () => {
@@ -139,7 +134,7 @@ describe('GameView', () => {
     const opponentCells = boards[1].findAll('.cell')
     await opponentCells[0].trigger('click')
 
-    expect(mockPeer.sendMessage).not.toHaveBeenCalled()
+    expect(mockConn.sendMessage).not.toHaveBeenCalled()
   })
 
   // --- Inkomend shot verwerken ---
@@ -149,10 +144,10 @@ describe('GameView', () => {
     mount(GameView, { global: { plugins: [router] } })
 
     // Schiet op een lege cel (geen schip op (5,5))
-    mockPeer._triggerMessage({ type: 'shot', x: 5, y: 5 })
+    mockConn._triggerMessage({ type: 'shot', x: 5, y: 5 })
     await nextTick()
 
-    expect(mockPeer.sendMessage).toHaveBeenCalledWith(
+    expect(mockConn.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'shot-result', x: 5, y: 5, hit: false }),
     )
     expect(gameState.myBoard[5][5].state).toBe('miss')
@@ -164,10 +159,10 @@ describe('GameView', () => {
     mount(GameView, { global: { plugins: [router] } })
 
     // Schiet op de scheepscel (0,0)
-    mockPeer._triggerMessage({ type: 'shot', x: 0, y: 0 })
+    mockConn._triggerMessage({ type: 'shot', x: 0, y: 0 })
     await nextTick()
 
-    expect(mockPeer.sendMessage).toHaveBeenCalledWith(
+    expect(mockConn.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'shot-result', x: 0, y: 0, hit: true }),
     )
   })
@@ -181,10 +176,10 @@ describe('GameView', () => {
     mount(GameView, { global: { plugins: [router] } })
 
     // Schiet op de tweede cel van het schip (x=1, y=0)
-    mockPeer._triggerMessage({ type: 'shot', x: 1, y: 0 })
+    mockConn._triggerMessage({ type: 'shot', x: 1, y: 0 })
     await flushPromises()
 
-    expect(mockPeer.sendMessage).toHaveBeenCalledWith(
+    expect(mockConn.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'game-over', winner: 'guest' }),
     )
     expect(router.currentRoute.value.path).toBe('/gameover')
@@ -196,7 +191,7 @@ describe('GameView', () => {
     const router = createTestRouter()
     mount(GameView, { global: { plugins: [router] } })
 
-    mockPeer._triggerMessage({ type: 'shot-result', x: 3, y: 3, hit: false })
+    mockConn._triggerMessage({ type: 'shot-result', x: 3, y: 3, hit: false })
     await nextTick()
 
     expect(gameState.opponentBoard[3][3].state).toBe('miss')
@@ -208,7 +203,7 @@ describe('GameView', () => {
     const router = createTestRouter()
     mount(GameView, { global: { plugins: [router] } })
 
-    mockPeer._triggerMessage({ type: 'shot-result', x: 2, y: 2, hit: true })
+    mockConn._triggerMessage({ type: 'shot-result', x: 2, y: 2, hit: true })
     await nextTick()
 
     expect(gameState.opponentBoard[2][2].state).toBe('hit')
@@ -220,7 +215,7 @@ describe('GameView', () => {
     const router = createTestRouter()
     const wrapper = mount(GameView, { global: { plugins: [router] } })
 
-    mockPeer._triggerMessage({ type: 'shot-result', x: 0, y: 0, hit: true, sunk: 'destroyer' })
+    mockConn._triggerMessage({ type: 'shot-result', x: 0, y: 0, hit: true, sunk: 'destroyer' })
     await nextTick()
 
     expect(wrapper.find('.notification').text()).toContain('gezonken')
@@ -233,7 +228,7 @@ describe('GameView', () => {
     await router.push('/game')
     mount(GameView, { global: { plugins: [router] } })
 
-    mockPeer._triggerMessage({ type: 'game-over', winner: 'host' })
+    mockConn._triggerMessage({ type: 'game-over', winner: 'host' })
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/gameover')
@@ -247,7 +242,7 @@ describe('GameView', () => {
     await router.push('/game')
     const wrapper = mount(GameView, { global: { plugins: [router] } })
 
-    mockPeer._triggerDisconnected()
+    mockConn._triggerDisconnected()
     await nextTick()
 
     expect(wrapper.find('.notification').text()).toContain('Verbinding verbroken')
@@ -263,10 +258,10 @@ describe('GameView', () => {
     await router.push('/game')
     mount(GameView, { global: { plugins: [router] } })
 
-    mockPeer._triggerMessage({ type: 'shot', x: 1, y: 0 })
+    mockConn._triggerMessage({ type: 'shot', x: 1, y: 0 })
     await flushPromises()
 
-    expect(mockPeer.sendMessage).toHaveBeenCalledWith(
+    expect(mockConn.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'game-over', winner: 'host' }),
     )
     expect(router.currentRoute.value.path).toBe('/gameover')
@@ -275,8 +270,8 @@ describe('GameView', () => {
   // --- heartbeat waarschuwing ---
   it('toont ConnectionWarning als heartbeatLost true is', async () => {
     setupGameState('host', true)
-    mockPeer.heartbeatLost.value = true
-    mockPeer.secondsSinceLastHeartbeat.value = 20
+    mockConn.heartbeatLost.value = true
+    mockConn.secondsSinceLastHeartbeat.value = 20
     const router = createTestRouter()
     const wrapper = mount(GameView, { global: { plugins: [router] } })
     await nextTick()
@@ -287,7 +282,7 @@ describe('GameView', () => {
 
   it('verbergt ConnectionWarning als heartbeatLost false is', async () => {
     setupGameState('host', true)
-    mockPeer.heartbeatLost.value = false
+    mockConn.heartbeatLost.value = false
     const router = createTestRouter()
     const wrapper = mount(GameView, { global: { plugins: [router] } })
     await nextTick()
@@ -301,11 +296,11 @@ describe('GameView', () => {
     const router = createTestRouter()
     mount(GameView, { global: { plugins: [router] } })
 
-    mockPeer._triggerMessage({ type: 'shot', x: 0, y: 0 })
+    mockConn._triggerMessage({ type: 'shot', x: 0, y: 0 })
     await nextTick()
 
     // Guest stuurt shot-result terug — dit was de bug
-    expect(mockPeer.sendMessage).toHaveBeenCalledWith(
+    expect(mockConn.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'shot-result' }),
     )
   })
@@ -317,7 +312,7 @@ describe('GameView', () => {
     const router = createTestRouter()
     const wrapper = mount(GameView, { global: { plugins: [router] } })
 
-    mockPeer._triggerMessage({ type: 'shot', x: 1, y: 0 })
+    mockConn._triggerMessage({ type: 'shot', x: 1, y: 0 })
     await nextTick()
 
     expect(wrapper.find('.notification').text()).toContain('gezonken')

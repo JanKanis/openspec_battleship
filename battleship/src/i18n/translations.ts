@@ -20,6 +20,7 @@ export const translations = {
       errorDisconnected: 'Verbinding verbroken.',
       errorHostFailed: 'Kon geen lobby aanmaken. Probeer opnieuw.',
       errorConnectFailed: 'Kan niet verbinden. Controleer de game-code en probeer opnieuw.',
+      solo: 'Solo spelen',
     },
     placement: {
       title: 'Schepen plaatsen',
@@ -78,6 +79,7 @@ export const translations = {
       errorDisconnected: 'Connection lost.',
       errorHostFailed: 'Could not create lobby. Please try again.',
       errorConnectFailed: 'Cannot connect. Check the game code and try again.',
+      solo: 'Solo play',
     },
     placement: {
       title: 'Place ships',

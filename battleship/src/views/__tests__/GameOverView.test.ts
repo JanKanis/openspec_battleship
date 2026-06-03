@@ -4,11 +4,11 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { ref } from 'vue'
 import GameOverView from '../GameOverView.vue'
 import { gameState, resetGame } from '../../game/state'
-import { usePeerConnection } from '../../composables/usePeerConnection'
+import { useGameConnection } from '../../composables/useGameConnection'
 import { useLocale } from '../../composables/useLocale'
 import { translations } from '../../i18n/translations'
 
-vi.mock('../../composables/usePeerConnection')
+vi.mock('../../composables/useGameConnection')
 vi.mock('../../composables/useLocale')
 
 function createTestRouter() {
@@ -30,16 +30,12 @@ function mockT(key: string) {
 
 describe('GameOverView', () => {
   beforeEach(() => {
-    vi.mocked(usePeerConnection).mockReturnValue({
-      status: ref('idle'),
-      myPeerId: ref(''),
-      errorMessage: ref(''),
-      role: ref(null as any),
-      initHost: vi.fn(),
-      connectToHost: vi.fn(),
+    vi.mocked(useGameConnection).mockReturnValue({
+      heartbeatLost: ref(false),
+      secondsSinceLastHeartbeat: ref(0),
+      isAI: false,
       sendMessage: vi.fn(),
       onMessage: vi.fn(),
-      onConnected: vi.fn(),
       onDisconnected: vi.fn(),
       destroy: vi.fn(),
     } as any)
