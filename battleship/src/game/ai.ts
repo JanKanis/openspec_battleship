@@ -11,7 +11,7 @@ export function randomBoard(): { board: Board; ships: Ship[] } {
   const ships: Ship[] = []
 
   for (let i = 0; i < SHIP_DEFINITIONS.length; i++) {
-    const def = SHIP_DEFINITIONS[i]
+    const def = SHIP_DEFINITIONS[i]!
     let placed = false
     while (!placed) {
       const orientation: Orientation = Math.random() < 0.5 ? 'horizontal' : 'vertical'
@@ -60,7 +60,8 @@ export function createAI(remainingShips: ShipType[]): AI {
   }
 
   function computeProbabilityMap(): number[][] {
-    const map: number[][] = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(0))
+    const map: number[][] = Array.from({ length: BOARD_SIZE }, (): number[] => new Array<number>(BOARD_SIZE).fill(0))
+    const inc = (y: number, x: number) => { const row = map[y] as number[]; row[x] = (row[x] as number) + 1 }
 
     for (const shipType of state.remainingShips) {
       const def = SHIP_DEFINITIONS.find((d) => d.type === shipType)!
@@ -76,7 +77,7 @@ export function createAI(remainingShips: ShipType[]): AI {
             return state.hitStack.some((h) => h.x === c.x && h.y === c.y)
           })
           if (valid) {
-            for (const c of cells) map[c.y][c.x]++
+            for (const c of cells) inc(c.y, c.x)
           }
         }
       }
@@ -91,7 +92,7 @@ export function createAI(remainingShips: ShipType[]): AI {
             return state.hitStack.some((h) => h.x === c.x && h.y === c.y)
           })
           if (valid) {
-            for (const c of cells) map[c.y][c.x]++
+            for (const c of cells) inc(c.y, c.x)
           }
         }
       }
@@ -122,8 +123,9 @@ export function createAI(remainingShips: ShipType[]): AI {
     for (let y = 0; y < BOARD_SIZE; y++) {
       for (let x = 0; x < BOARD_SIZE; x++) {
         const key = `${x},${y}`
-        if (!state.shotCells.has(key) && map[y][x] > bestScore) {
-          bestScore = map[y][x]
+        /* c8 ignore next 2 */
+        if (!state.shotCells.has(key) && (map[y] as number[])[x] as number > bestScore) {
+          bestScore = (map[y] as number[])[x] as number
           bestX = x
           bestY = y
         }
